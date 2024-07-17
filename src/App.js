@@ -1,25 +1,143 @@
-import logo from './logo.svg';
-import './App.css';
+import './styles.css';
+import { useState } from "react";
 
-function App() {
+const a = Array(3).fill(Array(3).fill(null));
+
+let winLine = null;
+
+// const [winLine, setWinLine] = useState(null);
+
+function Square({ value, onSquareClick, isWin }) {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <button
+      className={"square" + (isWin ? " highlight" : "")}
+      onClick={onSquareClick}
+    >
+      {value}
+    </button>
+  );
+}
+
+function Board({ xIsNext, squares, onPlay }) {
+  function handleOnClick(i) {
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
+    const nextSquares = squares.slice();
+    if (xIsNext) {
+      nextSquares[i] = "X";
+    } else {
+      nextSquares[i] = "O";
+    }
+    onPlay(nextSquares);
+  }
+
+  const winner = calculateWinner(squares);
+  let status;
+  if (winner) {
+    status = "Winner: " + winner;
+  } else {
+    status = "Next player: " + (xIsNext ? "X" : "O");
+  }
+
+  return (
+    <>
+      <div className="status">{status}</div>
+      {a.map((row, i) => (
+        <div className="board-row" key={i}>
+          {row.map((col, j) => {
+            const index = i * row.length + j;
+            let isWin = false;
+            if (winLine) {
+              isWin = winLine.includes(index);
+            }
+            return (
+              <Square
+                key={index}
+                value={squares[index]}
+                onSquareClick={() => handleOnClick(index)}
+                isWin={isWin}
+              />
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
+}
+
+export default function Game() {
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const [currentMove, setCurrentMove] = useState(0);
+  const [ascending, setAscending] = useState(true);
+  const xIsNext = currentMove % 2 === 0;
+  const currentSquares = history[currentMove];
+  const displayOrder = ascending ? "Ascending" : "Descending";
+
+  function handleToggle() {
+    setAscending(!ascending);
+  }
+
+  function handlePlay(nextSquares) {
+    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    setHistory(nextHistory);
+    setCurrentMove(nextHistory.length - 1);
+  }
+
+  function jumpTo(nextMove) {
+    setCurrentMove(nextMove);
+  }
+
+  const moves = history.map((squares, move) => {
+    let description;
+    if (move > 0 && move !== currentMove) {
+      description = "Go to move #" + move;
+    } else if (move === currentMove) {
+      description = "You are at move #" + move;
+    } else {
+      description = "Go to game start";
+    }
+
+    const hidden = currentMove === move;
+
+    return (
+      <li key={move}>
+        {!hidden && <button onClick={() => jumpTo(move)}>{description}</button>}
+        {hidden && <span>{description}</span>}
+      </li>
+    );
+  });
+
+  return (
+    <div className="game">
+      <div className="game-board">
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+      </div>
+      <div className="game-info">
+        <button onClick={handleToggle}>{displayOrder}</button>
+        <ol>{ascending ? moves : moves.reverse()}</ol>
+      </div>
     </div>
   );
 }
 
-export default App;
+function calculateWinner(squares) {
+  const lines = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    const [a, b, c] = lines[i];
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+      winLine = lines[i];
+      return squares[a];
+    }
+  }
+  return null;
+}
